@@ -201,6 +201,15 @@ function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.ad
 function toast(t){const el=document.createElement('div'); el.className='toast'; el.textContent=t; document.body.appendChild(el); setTimeout(()=>el.remove(),2500);}
 function genCode(){return Array.from({length:6},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');}
 function initials(n){return (n||'?').trim().slice(0,2).toUpperCase();}
+function isHostedByMe(code){
+  try{ return JSON.parse(localStorage.getItem('nebula_hosted')||'[]').includes(code); }catch(e){ return false; }
+}
+function markHosted(code){
+  try{
+    const list=JSON.parse(localStorage.getItem('nebula_hosted')||'[]');
+    if(!list.includes(code)){ list.push(code); localStorage.setItem('nebula_hosted', JSON.stringify(list.slice(-20))); }
+  }catch(e){}
+}
 function toggleTheme(){
   const html=document.documentElement;
   html.dataset.theme = html.dataset.theme==='dark' ? 'light' : 'dark';
@@ -211,7 +220,10 @@ function goPick(){
   myName=document.getElementById('nameInput').value.trim();
   if(!myName){toast('Enter your name first'); return;}
   const urlRoom=new URLSearchParams(location.search).get('room');
-  if(urlRoom){document.getElementById('codeInput').value=urlRoom; show('screen-join');}
+  if(urlRoom){
+    if(isHostedByMe(urlRoom.toUpperCase())){ createRoom(urlRoom.toUpperCase()); }
+    else { document.getElementById('codeInput').value=urlRoom; show('screen-join'); }
+  }
   else show('screen-pick');
 }
 
@@ -226,8 +238,10 @@ function setupPeer(id, onOpen){
   });
 }
 
-function createRoom(){
-  roomCode=genCode(); isHost=true;
+function createRoom(forceCode){
+  roomCode = forceCode ? forceCode.toUpperCase() : genCode();
+  isHost=true;
+  markHosted(roomCode);
   document.getElementById('roomCodeDisplay').textContent=roomCode;
   show('screen-code');
   setupPeer('nebula-'+roomCode, ()=>{});
